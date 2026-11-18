@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>QR de las mesas</title>
+<meta name="robots" content="noindex">
+<link rel="icon" href="img/logo-hd.jpg">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@800;900&family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+:root{--yellow:#F6DF1A;--navy:#14275e;--ink:#16140f;--cream:#f7f0d8;--muted:#6c6450}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Outfit',system-ui,sans-serif;background:var(--cream);color:var(--ink);padding:24px 16px}
+.panel{max-width:900px;margin:0 auto 28px;background:#fff;border-radius:18px;padding:22px;box-shadow:0 8px 24px rgba(0,0,0,.08)}
+h1{font-family:'Playfair Display',serif;color:var(--navy);font-size:1.8rem;margin-bottom:6px}
+.panel p{color:var(--muted);margin-bottom:14px;line-height:1.5}
+label{font-weight:700;font-size:.9rem;display:block;margin-bottom:6px}
+.row{display:flex;gap:10px;flex-wrap:wrap}
+input{flex:1;min-width:220px;padding:12px 14px;border-radius:12px;border:2px solid #e2d7b4;font:inherit}
+input:focus{outline:none;border-color:var(--navy)}
+button{padding:12px 20px;border-radius:999px;border:0;font:inherit;font-weight:700;cursor:pointer}
+.b1{background:var(--yellow);color:var(--ink)}
+.b2{background:var(--navy);color:#fff}
+.warn{margin-top:12px;padding:10px 14px;border-radius:12px;background:#fff4d6;color:#7a5a00;font-size:.9rem;display:none}
+.warn.on{display:block}
+.grid{max-width:900px;margin:0 auto;display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.card{background:#fff;border:3px solid var(--ink);border-radius:20px;padding:18px 14px;text-align:center;break-inside:avoid;position:relative;overflow:hidden}
+.card::before{content:"";position:absolute;inset:0 0 auto 0;height:10px;background:repeating-linear-gradient(90deg,var(--yellow) 0 18px,var(--navy) 18px 27px)}
+.card img.lg{width:58px;height:58px;border-radius:50%;margin:8px auto 4px}
+.card .mesa{font-family:'Playfair Display',serif;font-weight:900;font-size:2.3rem;color:var(--navy);line-height:1}
+.card .qr{display:flex;justify-content:center;margin:12px 0}
+.card .qr img,.card .qr canvas{width:150px!important;height:150px!important}
+.card .t{font-weight:700}
+.card small{color:var(--muted);display:block;margin-top:4px}
+@media (max-width:700px){.grid{grid-template-columns:repeat(2,1fr)}}
+@media print{
+  body{background:#fff;padding:0}
+  .panel{display:none}
+  .grid{gap:10px;max-width:none}
+  .card{border-width:2px}
+  @page{size:A4;margin:10mm}
+}
+</style>
+</head>
+<body>
+<div class="panel">
+  <h1>Códigos QR de las mesas</h1>
+  <p>Cada mesa tiene su propio QR. El cliente lo escanea, ve el menú y su pedido llega por WhatsApp como <b>"PEDIDO MESA 5"</b>, así saben a qué mesa llevarlo.</p>
+  <label for="url">Dirección de la página (cuando ya esté en internet)</label>
+  <div class="row">
+    <input id="url" type="url" placeholder="https://tupuntoinca.com">
+    <button class="b1" id="gen">Generar QR</button>
+    <button class="b2" onclick="window.print()">🖨️ Imprimir</button>
+  </div>
+  <div class="warn" id="warn">⚠️ Esta dirección es de tu computadora (localhost) y no funcionará en el teléfono de los clientes. Escribe la dirección real de la página cuando ya esté publicada.</div>
+</div>
+<div class="grid" id="grid"></div>
+
+<script>
+const MESAS = 9;
+const input = document.getElementById("url");
+function baseUrl(){
+  let u = input.value.trim();
+  if(!u) return "";
+  if(!/^https?:\/\//i.test(u)) u = "https://" + u;
+  u = u.replace(/[?#].*$/, "");
+  if(!/\.html?$/i.test(u) && !u.endsWith("/")) u += "/";
+  return u;
+}
+function render(){
+  const base = baseUrl();
+  document.getElementById("warn").classList.toggle("on", /localhost|127\.0\.0\.1|^file:/i.test(base));
+  const grid = document.getElementById("grid");
+  grid.innerHTML = "";
+  for(let i = 1; i <= MESAS; i++){
+    const link = base ? `${base}${base.includes("?") ? "&" : "?"}mesa=${i}` : "";
+    const card = document.createElement("div");
+    card.className = "card";
+    card.innerHTML = `<img class="lg" src="img/logo-hd.jpg" alt=""><div class="mesa">Mesa ${i}</div><div class="qr"></div><div class="t">Escanea, mira el menú y pide 📲</div><small>Tu Punto Inca · Comida peruana</small>`;
+    grid.appendChild(card);
+    const box = card.querySelector(".qr");
+    if(link && window.QRCode) new QRCode(box, {text: link, width: 300, height: 300, colorDark: "#14275e", colorLight: "#ffffff", correctLevel: QRCode.CorrectLevel.M});
+    else box.innerHTML = `<div style="width:150px;height:150px;border:2px dashed #ccc;border-radius:12px;display:grid;place-items:center;color:#999;font-size:.85rem">Escribe la dirección<br>arriba</div>`;
+  }
+}
+if(/^https?:/.test(location.protocol) && !/localhost|127\.0\.0\.1/.test(location.hostname)){
+  input.value = location.href.replace(/qr-mesas\.html.*$/, "");
+}
+document.getElementById("gen").addEventListener("click", render);
+input.addEventListener("keydown", e => { if(e.key === "Enter") render(); });
+render();
+</script>
+</body>
+</html>
